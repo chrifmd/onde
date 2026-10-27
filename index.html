@@ -1,200 +1,397 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulation de la propagation d'une onde progressive sinusoïdale à la surface de l'eau .</title>
-	
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .layout {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 10px;
-            justify-items: center;
-			
-        }
-
-        .spacer {
-            width: 100%;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation de la propagation d'une onde progressive sinusoïdale à la surface de l'eau</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .layout { display:grid; grid-template-columns:minmax(0,.4fr) 600px minmax(380px,.6fr); gap:10px; justify-items:center; align-items:start; }
+  .btn-home { display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:#bcd6ff; background:#5074b3;
+    border:1px solid #2a2f38; border-radius:6px; font-size:13px; font-weight:600; padding:.55rem .9rem; margin:0 6px 1.25rem 0; }
+  .btn-home:hover { border-color:#7C9EF0; color:#fff; }
+  .btn-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .btn-row .control-btn { margin:0; }
+  .trace-opt { margin:4px 0; }
+  .hint { margin-top:8px; color:#555; font-size:13px; }
+  .signature { text-align:center; font:bold 12px Arial; color:rgb(170,221,241); margin-top:30px; }
+  .simulation-zone { width:min(600px,100%); max-width:100%; }
+  .simulation-zone .btn-row { justify-content:center; }
+  .simulation-zone .control-btn, .simulation-zone select.control-btn { max-width:100%; }
+  select.control-btn { border:1px solid #9aa; font:inherit; font-weight:600; cursor:pointer; }
+  .opts2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; align-items:start; }
+  .opts2 .phu { display:block; margin-top:6px; font-size:.82rem; }
+  .opts2 .phu select { max-width:100%; font:inherit; font-size:.82rem; padding:2px; }
+  .tip-front { position:absolute; display:none; z-index:50; pointer-events:none; background:#2c3e50; color:#fff; border:1px solid #bcd6ff; border-radius:6px; padding:4px 8px; font:600 13px 'Segoe UI',Arial,sans-serif; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+  .tip-line { position:absolute; display:none; z-index:49; pointer-events:none; width:0; border-left:1px dashed #c0392b; }
+  .ptsopt { display:flex; flex:0 0 100%; justify-content:center; align-items:center; gap:10px; font-size:.85rem; margin:2px 0 0; }
+  .layout > .controls-panel { justify-self:stretch; width:100%; max-width:520px; box-sizing:border-box; }
+  @media (max-width:1150px) { .layout { grid-template-columns:minmax(0,1fr); } .layout > .spacer { display:none; } .layout > .controls-panel { max-width:640px; justify-self:center; } }
+  .opts2 + .vals, .vals { display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:6px; }
+  .ptsopt .pill { background:#ecf0f1; color:#2c3e50; border-radius:8px; padding:6px 12px; display:inline-flex; align-items:center; gap:10px; }
+  /* ===== Mobile / écrans tactiles ===== */
+  #crossSectionCanvas { touch-action:pan-y; }                 /* glisser horizontalement lit x, vertical = défilement */
+  @media (hover:none) { #tooltip { display:none !important; } }  /* l'infobulle de survol des boutons reste collée sur mobile */
+  @media (pointer:coarse), (max-width:900px) {
+    input[type=checkbox] { width:22px; height:22px; vertical-align:middle; margin-right:6px; }
+    .trace-opt label, .ptsopt label { display:inline-flex; align-items:center; min-height:40px; }
+    .parameter-control select, .phu select, select.control-btn { min-height:44px; font-size:1rem; }
+    .tpbar .tp-home, .tpbar .tp-sel select { min-height:44px; }
+    .ptsopt .pill { padding:4px 14px; }
+  }
+  .save-row { justify-content:center; }
+  #printArea { display:none; padding:20px; font-family:sans-serif; color:#000; }
+  #printArea img { max-width:100%; }
+  @media print { .container, .tpbar { display:none !important; } #printArea { display:block !important; } body { background:#fff !important; } }
+</style>
+<style>
+.tpbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;width:100%;padding:10px 16px;background:#1d2b53;border-bottom:3px solid #5074b3;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.3;text-align:left}
+.tpbar,.tpbar *{box-sizing:border-box}
+.tpbar .tp-home{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#bcd6ff;background:#5074b3;border:1px solid #2a2f38;border-radius:6px;font-size:13px;font-weight:600;padding:.55rem .9rem;margin:0;white-space:nowrap}
+.tpbar .tp-home:hover{border-color:#7C9EF0;color:#fff}
+.tpbar .tp-title{flex:1 1 280px;text-align:center;margin:0;font-size:1.25rem;font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:none}
+.tpbar .tp-sel{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:600;color:#bcd6ff}
+.tpbar .tp-sel select{max-width:min(440px,70vw);padding:8px 10px;border-radius:6px;border:1px solid #7C9EF0;background:#fff;color:#1d2b53;font:inherit;font-weight:600;cursor:pointer}
+@media (max-width:720px){.tpbar .tp-title{order:-1;flex-basis:100%;font-size:1.05rem}}
+@media print{.tpbar{display:none!important}}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🌊Simulation de la propagation d'une onde progressive sinusoïdale à la surface de l'eau</h1>
-          <div  style="margin-top:10px;color:#bcd6ff;font-size:16px">Ecran d'une cuve à onde (un clic sur l'éran pour démarrer ou arrêter l'animation)</div>
-        </header>
-
-        <main class="layout">
-            <div class="spacer"></div>
-
-            <!-- Zone de simulation -->
-			
-
-            <div class="simulation-zone">
-                <div class="canvases">
-                    <div class="main-view">
-                        
-						 <div class="control-buttons">
-                    
-							
-			                        <canvas id="mainCanvas" width="600" height="600"></canvas>
-									<button id="playPauseBtn" class="control-btn primary">▶ Démarrer</button>
-	   <button id="resetBtn" class="control-btn secondary">🔄 Reset</button>
-	   <button id="stepBackBtn" class="control-btn step">⏪ Pas arrière</button>
-                    <button id="stepForwardBtn" class="control-btn step">⏩ Pas avant</button>
-                    </div>
-					
-			
-                    <div class="cross-section-view visible" id="crossSectionView">
-                       
-						
-                    
-                        <canvas id="crossSectionCanvas" width="600" height="200"></canvas>
-						<canvas id="diagramCanvas" width="600" height="170"> </canvas>
-           
-<div id="pointsLegend" style="display:none; margin-top:8px; text-align:center; font-size:0.9rem;">
-    <span style="color:#ff0000; font-weight:bold;">●</span> Crête &nbsp;
-    <span style="color:#0000ff; font-weight:bold;">●</span> Creux &nbsp;
-    <span style="color:#00aa00; font-weight:bold;">●</span> Amplitude nulle
-</div>
-                    </div>
-                </div>
-
-               
-					
-					  <div class="control-buttons">
-                    
-                </div>
-				
-                </div>
-            </div>
-
-            <!-- Curseurs à droite -->
-			<div class="main-layout">
-  <!-- === Panneau de paramètres à gauche === -->
-  <div class="controls-panel">
-    <!-- Bouton diagrammes en haut -->
-	 
-	<button id="view3DBtn" class="control-btn">👓 Vue 3D</button>
-	<button id="strobBtn" class="control-btn">🔦Stroboscopie</button><br>
-	
-
-	<script>
-  document.getElementById("view3DBtn").addEventListener("click", function() {
-    window.location.href = "index_3D.html";
-  });
-  document.getElementById("strobBtn").addEventListener("click", function() {
-    window.location.href = "salle_obs.html";
-  });
+<nav class="tpbar" aria-label="Navigation entre les TP">
+  <a class="tp-home" href="https://simphysique.tn/">← Retour à simphysique.tn</a>
+  <div class="tp-title" role="heading" aria-level="1">ONDES MÉCANIQUES PROGRESSIVES</div>
+  <label class="tp-sel">TP :
+    <select id="tpMenu"><option value="onde_corde.html">Propagation d’une onde progressive le long d’une corde élastique tendue</option><option value="index.html" selected>Propagation d’une onde progressive à la surface de l’eau</option><option value="onde_sonore.html">Mesure de la longueur d’onde d’une onde sonore</option></select>
+  </label>
+</nav>
+<script>
+(function(){var s=document.getElementById('tpMenu');
+s.addEventListener('change',function(){if(s.value)location.href=s.value});
+addEventListener('pageshow',function(){for(var i=0;i<s.options.length;i++)if(s.options[i].defaultSelected){s.selectedIndex=i;break}});})();
 </script>
-   <label for="startDirection">Début du mouvement:</label><br>
-    <select id="startDirection">
-        <option value="up">Vers le haut (crête)</option>
-        <option value="down">Vers le bas (creux)</option>
-    </select>
-	
+<div class="container">
+  <header>
+    <a class="btn-home" href="cours.html">📘 Résumé du cours</a>
+    <h1>🌊 Simulation de la propagation d'une onde progressive sinusoïdale à la surface de l'eau</h1>
+    <div style="margin-top:10px;color:#bcd6ff;font-size:16px">Écran d'une cuve à onde (un clic sur l'écran pour démarrer ou arrêter l'animation)</div>
+  </header>
 
-    <h3>Paramètres</h3>   
-    
-            <div class="control-sliders">
-                <div class="parameter-control">
-                    <label for="frequencySlider">Fréquence (Hz)</label>
-                    <input type="range" id="frequencySlider" min="5" max="50.0" step="1" value="20.0">
-					 </div>
-					 <div class="parameter-control">
-                    <span id="frequencyValue">20.0 Hz</span>
-                </div>
+  <main class="layout">
+    <div class="spacer"></div>
 
-                <div class="parameter-control">
-                    <label for="amplitudeSlider">Amplitude (mm)</label>
-                    <input type="range" id="amplitudeSlider" min="1" max="10" value="5" step="0.1">
-                    <span id="amplitudeValue">5.0 mm</span>
-                </div>
+    <!-- Zone de simulation -->
+    <div class="simulation-zone">
+      <canvas id="mainCanvas" width="600" height="600"></canvas>
+      <div class="btn-row">
+        <button id="playPauseBtn" class="control-btn primary">▶ Démarrer</button>
+        <button id="resetBtn" class="control-btn">🔄 Reset</button>
+        <button id="vibratorBtn" class="control-btn">⏹ Arrêter le vibreur</button>
+        <button id="stepBackBtn" class="control-btn step">⏪ Pas arrière</button>
+        <button id="stepForwardBtn" class="control-btn step">⏩ Pas avant</button>
+      </div>
+      <div class="btn-row save-row">
+        <select id="saveSel" class="control-btn" aria-label="Enregistrer"><option value="">💾 Enregistrer…</option><option value="surf">Surface de l’eau</option><option value="cut">Coupe transversale</option><option value="dia">Diagrammes de mouvement</option><option value="top">Vue de dessus (crêtes / creux)</option><option value="all">Tout ce qui est affiché</option></select>
+        <select id="printSel" class="control-btn" aria-label="Imprimer"><option value="">🖨 Imprimer…</option><option value="top">Vue de dessus (crêtes / creux)</option><option value="all">Tout ce qui est affiché</option></select>
+        <span class="ptsopt"><span class="pill">Points sur la vue de dessus : <label><input type="checkbox" id="optA" checked> A</label> <label><input type="checkbox" id="optB" checked> B</label></span></span>
+      </div>
 
-                <div class="parameter-control">
-                    <label for="speedSlider">Vitesse d'animation</label>
-                    <input type="range" id="speedSlider" min="0.01" max="0.2" value="0.06" step="0.001">
-                    <span id="speedValue">- </span>
-                </div>
-				<div class="control-section">
-                    <h3>Paramètres calculés</h3>
-                    <div class="calculated-params">
-						<div class="control-buttons">
-                </div
-            </div>
-			<div class="param-display">
-                            <span class="param-label">chronmètre:</span>
-                          
-							<div id="chrono" style="font-weight:bold; font-size:16px; margin:5px;">
-  t = 0 ms
-</div>
-                        </div>
-				 <div class="param-display">
-                            <span class="param-label">Période (T):</span>
-                            <span id="periodValue">0.50 s</span><br>
-                        </div>
-
-                        <div class="param-display">
-                            <span class="param-label">Longueur d'onde (λ):</span>
-                            <span id="wavelengthValue"> 0.5cm</span><br>
-                        </div>
-
-                        <div class="param-display">
-                            <span class="param-label">Célérité (v):</span>
-                            <span id="velocity1Value">10.0 cm/s</span><br>
-                        </div>
- <div class="parameter-control">
- <button id="crossSectionBtn" class="control-btn tertiary">👁 Coupe transversale</button>
-  <button id="togglePointsBtn" class="control-btn">🔵 Afficher points</button>
-  <button id="toggleDiagramBtn">📊 Diagrammes de mouvement</button><br>
-    
-    <!-- Bloc masqué qui s'affiche quand on clique -->
-    <div id="traceControls">
-  <label style="color:purple;"><input type="checkbox" id="toggleSourceTrace" > Source</label>
-  </div>
-  <div id="traceControls">
-  <label style="color:red;"><input type="checkbox" id="toggleATrace" > Point A</label>
-  </div>
-  <div id="traceControls">
-  <label style="color:green;"><input type="checkbox" id="toggleBTrace" > Point B</label>
-</div>
-<div style="margin-top:8px;color:#bcd6ff;font-size:13px">Cliquer-glisser sur les points A et B de la surface de l'eau pour changer leur position </div>
-    </div>
-    
-
-                
-			
-        </main>
-	
-       
-       
-        
-					<div id="tooltipA" class="tooltip-point"></div>
-<div id="tooltipB" class="tooltip-point"></div>
-<div id="tooltip" style="
-    position:absolute;
-    padding:4px 8px;
-    background:rgba(63, 164,239, 0.8);
-    color:#fff;
-    border-radius:6px;
-    font-size:12px;
-    pointer-events:none;
-    display:none;
-    z-index:1000;
-"></div>
-
-					
-					
-		<footer>
-            <p>Simulation conçue par Mohamed Chérif - Menzel Témime - Tunisie. </p>
-            <p>chrif.md@gmail.com</p>
-        </footer>
+      <div class="cross-section-view" id="crossSectionView">
+        <canvas id="crossSectionCanvas" width="600" height="200"></canvas>
+        <div id="pointsLegend" style="display:none; margin-top:8px; text-align:center; font-size:0.9rem;">
+          <span style="color:#ff0000; font-weight:bold;">●</span> Crête &nbsp;
+          <span style="color:#0000ff; font-weight:bold;">●</span> Creux &nbsp;
+          <span style="color:#00aa00; font-weight:bold;">●</span> Amplitude nulle
+        </div>
+      </div>
+      <canvas id="diagramCanvas" width="600" height="170" style="display:none; margin-top:12px"></canvas>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Panneau de paramètres -->
+    <div class="controls-panel">
+      <div class="btn-row">
+        <button id="view3DBtn" class="control-btn">👓 Vue 3D</button>
+        <button id="strobBtn" class="control-btn">🔦 Stroboscopie</button>
+      </div>
 
+      <div class="parameter-control">
+        <label for="startDirection">Début du mouvement :</label>
+        <select id="startDirection">
+          <option value="up">Vers le haut (crête)</option>
+          <option value="down">Vers le bas (creux)</option>
+        </select>
+      </div>
+
+      <h3>Paramètres</h3>
+      <div class="control-sliders">
+        <div class="parameter-control">
+          <label for="frequencySlider">Fréquence (Hz)</label>
+          <input type="range" id="frequencySlider" min="5" max="50" step="1" value="20">
+          <span id="frequencyValue">20.0 Hz</span>
+        </div>
+        <div class="parameter-control">
+          <label for="velocitySlider">Célérité v (cm/s)</label>
+          <input type="range" id="velocitySlider" min="5" max="20" step="0.5" value="10">
+          <span id="velocitySliderValue">10.0 cm/s</span>
+        </div>
+        <div class="parameter-control">
+          <label for="amplitudeSlider">Amplitude (mm)</label>
+          <input type="range" id="amplitudeSlider" min="1" max="10" value="5" step="0.1">
+          <span id="amplitudeValue">5.0 mm</span>
+        </div>
+        <div class="parameter-control">
+          <label for="speedSlider">Vitesse d'animation</label>
+          <input type="range" id="speedSlider" min="0.01" max="0.2" value="0.06" step="0.001">
+          <span id="speedValue"></span>
+        </div>
+      </div>
+
+      <h3>Paramètres calculés</h3>
+      <div class="calculated-params">
+        <div class="param-display">
+          <span class="param-label">Chronomètre :</span>
+          <span id="chrono" style="font-weight:bold">t = 0 ms</span>
+        </div>
+        <div class="param-display">
+          <span class="param-label">Période (T) :</span>
+          <span id="periodValue">0.05 s</span>
+        </div>
+        <div class="param-display">
+          <span class="param-label">Longueur d'onde (λ) :</span>
+          <span id="wavelengthValue">0.5 cm</span>
+        </div>
+        <div class="param-display">
+          <span class="param-label">Célérité (v) :</span>
+          <span id="velocityValue">10.0 cm/s</span>
+        </div>
+      </div>
+
+
+      <div class="parameter-control">
+        <div class="btn-row">
+          <button id="crossSectionBtn" class="control-btn tertiary">👁 Coupe transversale</button>
+          <button id="togglePointsBtn" class="control-btn">🔵 Afficher points</button>
+          <button id="toggleDiagramBtn" class="control-btn">📊 Diagrammes de mouvement</button>
+        </div>
+        <div class="opts2">
+          <div class="col">
+            <div class="trace-opt"><label style="color:purple"><input type="checkbox" id="toggleSourceTrace"> Source</label></div>
+            <div class="trace-opt"><label style="color:red"><input type="checkbox" id="toggleATrace"> Point A</label></div>
+            <div class="trace-opt"><label style="color:green"><input type="checkbox" id="toggleBTrace"> Point B</label></div>
+          </div>
+          <div class="col">
+            <div class="trace-opt"><label><input type="checkbox" id="kPAS"> φA − φS</label></div>
+            <div class="trace-opt"><label><input type="checkbox" id="kPBS"> φB − φS</label></div>
+            <div class="trace-opt"><label><input type="checkbox" id="kPAB"> φA − φB</label></div>
+            <label class="phu">Unité : <select id="phU"><option value="rad">radians</option><option value="pi">multiples de π</option></select></label>
+          </div>
+        </div>
+        <div class="vals">
+        <div class="param-display" id="rAS" style="display:none"><span>φA − φS :</span><span id="vAS"></span></div>
+        <div class="param-display" id="rBS" style="display:none"><span>φB − φS :</span><span id="vBS"></span></div>
+        <div class="param-display" id="rAB" style="display:none"><span>φA − φB :</span><span id="vAB"></span></div>
+        </div>
+        <div class="hint">Mettez l'animation en pause, puis faites glisser les points A et B sur la surface de l'eau pour changer leur position.</div>
+      </div>
+    </div>
+  </main>
+
+  <div id="tooltipA" class="tooltip-point"></div>
+  <div id="tooltipB" class="tooltip-point"></div>
+  <div id="tooltip" class="tooltip-point"></div>
+
+  <footer>
+    <div class="signature">Simulation de la propagation d'une onde progressive à la surface de l'eau – chrif.md@gmail.com – Septembre 2025</div>
+  </footer>
+</div>
+
+<script>
+  document.getElementById("view3DBtn").addEventListener("click", () => { window.location.href = "index_3D.html"; });
+  document.getElementById("strobBtn").addEventListener("click", () => { window.location.href = "salle_obs.html"; });
+</script>
+<script src="script.js"></script>
+<div id="printArea"><h2>Onde progressive à la surface de l’eau</h2><img id="pImg" alt="Courbes et aspect de la surface"></div>
+<script>
+/* Enregistrer / imprimer les courbes (même principe que pour la corde) */
+(function(){
+  const $ = id => document.getElementById(id);
+  const main = $('mainCanvas'), cut = $('crossSectionCanvas'), dia = $('diagramCanvas');
+  const sel = $('saveSel');
+  const shown = el => !!el && el.offsetParent !== null && el.offsetWidth > 0;
+  const names = {surf:'surface_eau.png', cut:'coupe_transversale.png', top:'vue_dessus_rides.png', dia:'diagrammes_mouvement.png', all:'surface_coupe_diagrammes.png'};
+  const titles = {surf:'Surface de l’eau', cut:'Coupe transversale', top:'Vue de dessus de la surface libre', dia:'Diagrammes de mouvement', all:'Onde à la surface de l’eau'};
+
+  function refresh(){
+    sel.querySelector('[value=cut]').disabled = !shown(cut);
+    sel.querySelector('[value=dia]').disabled = !shown(dia);
+  }
+  setInterval(refresh, 400); refresh();
+
+  function caption(m){
+    return titles[m] + ' — ' + $('chrono').textContent.trim()
+      + ' — N = ' + (+$('frequencySlider').value) + ' Hz'
+      + ' — a = ' + (+$('amplitudeSlider').value).toFixed(1) + ' mm'
+      + ' — v = ' + $('velocityValue').textContent.trim();
+  }
+
+  // script.js décoche toutes les cases au chargement : on recoche A et B par défaut
+  addEventListener('load', () => setTimeout(() => { $('optA').checked = true; $('optB').checked = true; syncPts(); }, 0));
+  // A et B : cases cochées = points affichés sur la vue de dessus (écran, image enregistrée, impression)
+  function syncPts(){
+    if (typeof simulation === 'undefined' || !simulation) return;
+    simulation.showPointA = $('optA').checked; simulation.showPointB = $('optB').checked;
+    simulation.draw();
+  }
+  $('optA').addEventListener('change', syncPts);
+  $('optB').addEventListener('change', syncPts);
+
+  /* Vue de dessus schématique : rides crêtes en trait plein, rides creux en pointillés */
+  function topFig(){
+    const s = simulation, W = s.mainCanvas.width, H = s.mainCanvas.height, cx = W/2, cy = H/2;
+    const PX = 200, TAU = 2*Math.PI;                       // 200 px = 1 cm
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#000'; g.fillStyle = '#000'; g.lineWidth = 1.6;
+    const t = s.time, v = s.velocity, f = s.frequency, phi0 = s.startDirection === 'up' ? 0 : Math.PI;
+    const rMax = Math.hypot(cx, cy) + 2;
+    function ring(rCm, dashed){
+      const r = rCm * PX; if (r <= 0 || r > rMax) return;
+      g.setLineDash(dashed ? [9, 6] : []);
+      g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
+    }
+    // élongation maximale (+a : crête, −a : creux) pour chaque période d'émission du vibreur
+    s.segments.forEach(sg => {
+      const end = Math.min(t, sg.t1);
+      [[Math.PI/2, false], [3*Math.PI/2, true]].forEach(([th, dashed]) => {
+        for (let k = Math.ceil((phi0 - th) / TAU); ; k++) {
+          const tau = sg.t0 + (th + TAU*k - phi0) / (TAU*f);
+          if (tau >= end) break;
+          ring(v * (t - tau), dashed);
+        }
+      });
+    });
+    g.setLineDash([]);
+    // source S, points A et B
+    g.font = 'bold 14px Arial';
+    g.beginPath(); g.arc(cx, cy, 5, 0, TAU); g.fill(); g.fillText('S', cx + 8, cy - 8);
+    [['A', s.pointA, 'optA'], ['B', s.pointB, 'optB']].forEach(([n, p, id]) => {
+      if (!$(id).checked) return;
+      g.beginPath(); g.arc(p.x, p.y, 4, 0, TAU); g.fill(); g.fillText(n, p.x + 8, p.y - 8);
+    });
+    // échelle 1 cm et λ
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(20, H-24); g.lineTo(20+PX, H-24);
+    g.moveTo(20, H-30); g.lineTo(20, H-18); g.moveTo(20+PX, H-30); g.lineTo(20+PX, H-18); g.stroke();
+    g.font = '13px Arial';
+    g.fillText('1 cm      λ = ' + s.wavelength.toFixed(2) + ' cm', 20, H-36);
+    // légende
+    g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(W-170, H-40); g.lineTo(W-130, H-40); g.stroke();
+    g.fillText('ride crête', W-122, H-36);
+    g.setLineDash([9, 6]); g.beginPath(); g.moveTo(W-170, H-18); g.lineTo(W-130, H-18); g.stroke(); g.setLineDash([]);
+    g.fillText('ride creux', W-122, H-14);
+    g.lineWidth = 1; g.strokeRect(0.5, 0.5, W-1, H-1);
+    return c;
+  }
+  function build(m){
+    const parts = [];
+    if (m === 'top') parts.push(topFig());
+    if (m === 'surf' || m === 'all') parts.push(main);
+    if (m === 'cut'  || (m === 'all' && shown(cut))) parts.push(cut);
+    if (m === 'dia'  || (m === 'all' && shown(dia))) parts.push(dia);
+    const o = document.createElement('canvas');
+    o.width = Math.max(...parts.map(c => c.width));
+    o.height = 30 + parts.reduce((s, c) => s + c.height, 0);
+    const g = o.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, o.width, o.height);
+    let y = 30; parts.forEach(c => { g.drawImage(c, 0, y); y += c.height; });
+    g.fillStyle = '#222';
+    let fs = 14; g.font = 'bold ' + fs + 'px Segoe UI,sans-serif';
+    while (g.measureText(caption(m)).width > o.width - 20 && fs > 9) { fs--; g.font = 'bold ' + fs + 'px Segoe UI,sans-serif'; }
+    g.fillText(caption(m), 10, 20);
+    return o;
+  }
+  function save(cn, name){
+    cn.toBlob(async b => {
+      let dl = null;
+      try { dl = await claude.use('downloads'); } catch(e) {}
+      if (dl) { try { await dl.save({filename:name, data:b}); } catch(e) {} }
+      else { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click(); }
+    });
+  }
+  sel.onchange = function(){ const m = this.value; this.value = ''; if (m) save(build(m), names[m]); };
+  $('printSel').onchange = function(){
+    const m = this.value; this.value = ''; if (!m) return;
+    $('pImg').src = build(m).toDataURL('image/png');
+    setTimeout(() => { try { window.print(); } catch(e) { alert('Impression indisponible ici : utilisez « Enregistrer » puis imprimez l’image.'); } }, 60);
+  };
+})();
+</script>
+
+
+<script>
+/* Déphasages φA−φS, φB−φS, φA−φB  +  afficheur de l'abscisse x sur la coupe transversale */
+(function(){
+  const $ = id => document.getElementById(id);
+  const TAU = 2*Math.PI, PX_PER_CM = 200, TOL = 0.1;
+  const ok = () => typeof simulation !== 'undefined' && simulation && simulation.mainCanvas;
+
+  /* ---------- déphasages ---------- */
+  function phTxt(v){
+    const u = $('phU').value === 'pi' ? (v/Math.PI).toFixed(2) + ' π' : v.toFixed(2) + ' rad';
+    const r = ((v % TAU) + TAU) % TAU, e = Math.min(r, TAU - r);
+    return u + (e < TOL ? ' (en phase)'
+              : Math.abs(e - Math.PI) < TOL ? ' (opposition)'
+              : Math.abs(e - Math.PI/2) < TOL ? ' (quadrature)' : '');
+  }
+  const set = (el, s) => { if (el.textContent !== s) el.textContent = s; };
+  function phases(){
+    if (!ok()) return;
+    const s = simulation, cx = s.mainCanvas.width/2, cy = s.mainCanvas.height/2;
+    const dA = Math.hypot(s.pointA.x - cx, s.pointA.y - cy) / PX_PER_CM;   // cm
+    const dB = Math.hypot(s.pointB.x - cx, s.pointB.y - cy) / PX_PER_CM;
+    const w = TAU * s.frequency, v = s.velocity;
+    const AS = -w*dA/v, BS = -w*dB/v, AB = AS - BS;
+    [['AS',AS,'kPAS'],['BS',BS,'kPBS'],['AB',AB,'kPAB']].forEach(q => {
+      const show = $(q[2]).checked;
+      const row = $('r'+q[0]);
+      if (row.style.display !== (show ? '' : 'none')) row.style.display = show ? '' : 'none';
+      if (show) set($('v'+q[0]), phTxt(q[1]));
+    });
+  }
+  (function loop(){ phases(); requestAnimationFrame(loop); })();
+
+  /* ---------- abscisse x sous la souris (coupe transversale) ---------- */
+  const cv = $('crossSectionCanvas');
+  const tip = document.createElement('div');  tip.className = 'tip-front'; document.body.appendChild(tip);
+  const line = document.createElement('div'); line.className = 'tip-line'; document.body.appendChild(line);
+  const hide = () => { tip.style.display = 'none'; line.style.display = 'none'; };
+
+  function move(e){
+    if (!ok()) return hide();
+    const r = cv.getBoundingClientRect();
+    const xpx = (e.clientX - r.left) * cv.width / r.width;
+    const cx = cv.width / 2;
+    if (xpx < 50 || xpx > cv.width - 50) return hide();           // hors de l'axe gradué
+    const xcm = (xpx - cx) / PX_PER_CM;                          // abscisse (cm), source en 0
+    const lam = simulation.wavelength;
+    const sg = xcm < 0 ? '−' : '+';
+    tip.textContent = 'x = ' + sg + Math.abs(xcm).toFixed(2) + ' cm  (' + sg + Math.abs(xcm/lam).toFixed(2) + ' λ)';
+    tip.style.display = 'block';
+    const touch = e.pointerType === 'touch';
+    const maxLeft = scrollX + document.documentElement.clientWidth - tip.offsetWidth - 6;
+    tip.style.left = Math.max(scrollX + 4, Math.min(e.pageX + 14, maxLeft)) + 'px';
+    tip.style.top  = (e.pageY - (touch ? 64 : 34)) + 'px';
+    line.style.display = 'block';
+    line.style.left   = (e.pageX) + 'px';
+    line.style.top    = (r.top + scrollY) + 'px';
+    line.style.height = r.height + 'px';
+  }
+  cv.addEventListener('pointermove', move);
+  cv.addEventListener('pointerleave', hide);
+  cv.addEventListener('pointercancel', hide);
+  addEventListener('scroll', hide, {passive:true});
+})();
+</script>
 </body>
 </html>

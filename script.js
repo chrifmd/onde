@@ -80,6 +80,8 @@ class WaveSimulation {
     this.frequencySlider = document.getElementById("frequencySlider");
     this.amplitudeSlider = document.getElementById("amplitudeSlider");
     this.speedSlider   = document.getElementById("speedSlider");
+    this.velocitySlider = document.getElementById("velocitySlider");
+    this.velocitySliderValue = document.getElementById("velocitySliderValue");
 	this.crossSectionCanvas = document.getElementById("crossSectionCanvas");
     this.crossSectionCtx = this.crossSectionCanvas ? this.crossSectionCanvas.getContext("2d") : null;
 
@@ -125,6 +127,8 @@ class WaveSimulation {
     this.showCrossSectionCanvas = false;
 
     // Ecouteurs
+    this.showPointA = true;   // cases « A » / « B » de la vue de dessus
+    this.showPointB = true;
     this.attachUIListeners();
 
 window.onload = function() {
@@ -151,6 +155,10 @@ window.onload = function() {
   attachUIListeners() {
     // Boutons
 	this.showPoints = false;
+    // Périodes pendant lesquelles le vibreur émet : [t0, t1[
+    this.segments = [{ t0: 0, t1: Infinity }];
+    this.vibratorBtn = document.getElementById("vibratorBtn");
+    if (this.vibratorBtn) this.vibratorBtn.addEventListener("click", () => this.toggleVibrator());
 	//this.crossSectionView.classList.remove('visible');
 	// Infobulles au survol
   this.mainCanvas.addEventListener("mousemove", (e) => {
@@ -159,6 +167,7 @@ window.onload = function() {
   let hovering = null;
 
   [this.pointA, this.pointB].forEach(pt => {
+    if ((pt === this.pointA && !this.showPointA) || (pt === this.pointB && !this.showPointB)) return;
     const dx = pos.x - pt.x;
     const dy = pos.y - pt.y;
     if (Math.sqrt(dx*dx + dy*dy) < radius) {
@@ -216,7 +225,7 @@ this.mainCanvas.addEventListener("mouseleave", () => {
     }
 
     // Clic sur le canvas principal pour démarrer / pause
-    this.mainCanvas.addEventListener("click", () => this.togglePlayPause());
+    this.mainCanvas.addEventListener("click", () => { if (!this.suppressClick) this.togglePlayPause(); });
 
     // Sliders
     if (this.frequencySlider) {
@@ -231,6 +240,16 @@ this.mainCanvas.addEventListener("mouseleave", () => {
       this.amplitudeSlider.addEventListener("input", (e) => {
       this.amplitude = parseFloat(e.target.value);
       this.updateDisplay();
+      });
+    }
+    if (this.velocitySlider) {
+      this.velocitySlider.value = String(this.velocity);
+      this.velocitySlider.addEventListener("input", (e) => {
+        this.velocity = parseFloat(e.target.value);       // cm/s
+        this.velocityVisual = this.velocity * 100;        // rendu : 1000 <-> 10 cm/s (200 px/cm)
+        this.updateCalculatedParameters();                // λ = v / N
+        this.updateDisplay();
+        this.draw();
       });
     }
     if (this.speedSlider) {
@@ -257,10 +276,15 @@ this.mainCanvas.addEventListener("mouseleave", () => {
 
     // Drag & drop des points A/B quand on est à l'arrêt
     this.draggingPoint = null;
-    this.mainCanvas.addEventListener("mousedown", (e) => this.startDrag(e));
-    this.mainCanvas.addEventListener("mousemove", (e) => this.drag(e));
-    this.mainCanvas.addEventListener("mouseup",   () => this.stopDrag());
-    this.mainCanvas.addEventListener("mouseleave",() => this.stopDrag());
+    this.mainCanvas.addEventListener("pointerdown", (e) => {
+      this.startDrag(e);
+      if (this.draggingPoint) { try { this.mainCanvas.setPointerCapture(e.pointerId); } catch (_) {} }
+    });
+    this.mainCanvas.addEventListener("pointermove", (e) => this.drag(e));
+    this.mainCanvas.addEventListener("pointerup", () => this.stopDrag());
+    this.mainCanvas.addEventListener("pointercancel", () => this.stopDrag());
+    // empêche le défilement de la page seulement pendant le glissement d'un point
+    this.mainCanvas.addEventListener("touchmove", (e) => { if (this.draggingPoint) e.preventDefault(); }, { passive: false });
   }
  updateTooltips() {
     const tooltipA = document.getElementById("tooltipA");
@@ -273,13 +297,13 @@ this.mainCanvas.addEventListener("mouseleave", () => {
     const xA_lambda = (xA_cm / this.wavelength).toFixed(2);
     const xB_lambda = (xB_cm / this.wavelength).toFixed(2);
 
-    tooltipA.style.left = (this.pointA.x + this.mainCanvas.offsetLeft + 15) + "px";
-    tooltipA.style.top = (this.pointA.y + this.mainCanvas.offsetTop - 10) + "px";
+    tooltipA.style.left = (this.pointA.x * this.cssScale() + this.mainCanvas.offsetLeft + 15) + "px";
+    tooltipA.style.top = (this.pointA.y * this.cssScale() + this.mainCanvas.offsetTop - 10) + "px";
     tooltipA.textContent = `xA = ${xA_lambda} λ`;
     tooltipA.style.display = (this.draggingPoint === this.pointA) ? "block" : "none";
 
-    tooltipB.style.left = (this.pointB.x + this.mainCanvas.offsetLeft + 15) + "px";
-    tooltipB.style.top = (this.pointB.y + this.mainCanvas.offsetTop - 10) + "px";
+    tooltipB.style.left = (this.pointB.x * this.cssScale() + this.mainCanvas.offsetLeft + 15) + "px";
+    tooltipB.style.top = (this.pointB.y * this.cssScale() + this.mainCanvas.offsetTop - 10) + "px";
     tooltipB.textContent = `xB = ${xB_lambda} λ`;
     tooltipB.style.display = (this.draggingPoint === this.pointB) ? "block" : "none";
   }
@@ -288,16 +312,20 @@ this.mainCanvas.addEventListener("mouseleave", () => {
   // ------------------------------------------------
  getMousePos(evt) {
     const rect = this.mainCanvas.getBoundingClientRect();
-    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
-	
+    const sx = this.mainCanvas.width / rect.width;
+    const sy = this.mainCanvas.height / rect.height;
+    return { x: (evt.clientX - rect.left) * sx, y: (evt.clientY - rect.top) * sy };
+  }
+  cssScale() {
+    return this.mainCanvas.getBoundingClientRect().width / this.mainCanvas.width;
   }
 showTooltipForPoint(pt, tooltip, label) {
   const pixelsPerCm = 200;
   const x_cm = (pt.x - this.mainCanvas.width / 2) / pixelsPerCm;
   const x_lambda = Math.abs((x_cm / this.wavelength).toFixed(2));
 
-  tooltip.style.left = (pt.x + this.mainCanvas.offsetLeft + 15) + "px";
-  tooltip.style.top = (pt.y + this.mainCanvas.offsetTop - 10) + "px";
+  tooltip.style.left = (pt.x * this.cssScale() + this.mainCanvas.offsetLeft + 15) + "px";
+  tooltip.style.top = (pt.y * this.cssScale() + this.mainCanvas.offsetTop - 10) + "px";
   tooltip.textContent = ` x ${label}= ${x_lambda} λ`;
 }
 
@@ -305,9 +333,10 @@ showTooltipForPoint(pt, tooltip, label) {
     if (this.isRunning) return;
     const pos = this.getMousePos(evt);
     [this.pointA, this.pointB].forEach(pt => {
+      if ((pt === this.pointA && !this.showPointA) || (pt === this.pointB && !this.showPointB)) return;
       const dx = pos.x - pt.x;
       const dy = pos.y - pt.y;
-      if (Math.sqrt(dx * dx + dy * dy) < 12) this.draggingPoint = pt;
+      if (Math.sqrt(dx * dx + dy * dy) < (evt.pointerType === 'touch' ? 30 : 12)) this.draggingPoint = pt;
     });
   }
 
@@ -322,6 +351,7 @@ showTooltipForPoint(pt, tooltip, label) {
   }
 
   stopDrag() {
+    if (this.draggingPoint) { this.suppressClick = true; setTimeout(() => { this.suppressClick = false; }, 60); }
     this.draggingPoint = null;
     const tA = document.getElementById("tooltipA");
     const tB = document.getElementById("tooltipB");
@@ -340,13 +370,13 @@ showTooltipForPoint(pt, tooltip, label) {
     const xA_lambda = (xA_cm / this.wavelength).toFixed(2);
     const xB_lambda = (xB_cm / this.wavelength).toFixed(2);
 
-    tooltipA.style.left = (this.pointA.x + this.mainCanvas.offsetLeft + 15) + "px";
-    tooltipA.style.top = (this.pointA.y + this.mainCanvas.offsetTop - 10) + "px";
+    tooltipA.style.left = (this.pointA.x * this.cssScale() + this.mainCanvas.offsetLeft + 15) + "px";
+    tooltipA.style.top = (this.pointA.y * this.cssScale() + this.mainCanvas.offsetTop - 10) + "px";
     tooltipA.textContent = `xA = ${xA_lambda} λ`;
     tooltipA.style.display = (this.draggingPoint === this.pointA) ? "block" : "none";
 
-    tooltipB.style.left = (this.pointB.x + this.mainCanvas.offsetLeft + 15) + "px";
-    tooltipB.style.top = (this.pointB.y + this.mainCanvas.offsetTop - 10) + "px";
+    tooltipB.style.left = (this.pointB.x * this.cssScale() + this.mainCanvas.offsetLeft + 15) + "px";
+    tooltipB.style.top = (this.pointB.y * this.cssScale() + this.mainCanvas.offsetTop - 10) + "px";
     tooltipB.textContent = `xB = ${xB_lambda} λ`;
     tooltipB.style.display = (this.draggingPoint === this.pointB) ? "block" : "none";
   }
@@ -358,7 +388,7 @@ showTooltipForPoint(pt, tooltip, label) {
   
  updateCalculatedParameters() {
   // Calcul physique (valeurs affichées)
-  const velocity = 10; // cm/s (réaliste)
+  const velocity = this.velocity; // cm/s (réglable)
   this.wavelength = velocity / this.frequency;
   this.period = 1 / this.frequency;
   this.wavelengthDisplay = this.wavelength * this.displayScale;
@@ -370,6 +400,8 @@ showTooltipForPoint(pt, tooltip, label) {
     if (this.wavelengthValue) this.wavelengthValue.textContent = `${(this.wavelength||0).toFixed(1)} cm`;
     if (this.amplitudeValue)  this.amplitudeValue.textContent  = `${this.amplitude.toFixed(1)} mm`;
    // if (this.speedValue)      this.speedValue.textContent      = `${this.animationSpeed.toFixed(1)}×`;    
+    if (this.velocityValue)   this.velocityValue.textContent   = `${this.velocity.toFixed(1)} cm/s`;
+    if (this.velocitySliderValue) this.velocitySliderValue.textContent = `${this.velocity.toFixed(1)} cm/s`;
     if (this.velocityVisualValue)   this.velocityVisualValue.textContent   = `${this.velocityVisual.toFixed(1)} cm/s`;
 
   }
@@ -402,8 +434,7 @@ for (let x = centerX; x >= 50; x -= 2) {
         leftPoints.push({ x, y: centerY, amplitude: 0 });
         continue;
     }
-    const phase = 2 * Math.PI * (this.frequency * currentTime - distanceCm / this.wavelengthDisplay) + ((this.startDirection === "up") ? 0 : Math.PI);
-    const amplitude = this.amplitude * Math.sin(phase);
+    const amplitude = this.waveAt(currentTime - distanceCm / (this.velocity * this.displayScale));
     const y = centerY - amplitude * 2;
     leftPoints.push({ x, y, amplitude });
 }
@@ -415,8 +446,7 @@ for (let x = centerX; x <= width - 50; x += 2) {
         rightPoints.push({ x, y: centerY, amplitude: 0 });
         continue;
     }
-    const phase = 2 * Math.PI * (this.frequency * currentTime - distanceCm / this.wavelengthDisplay)  + ((this.startDirection === "up") ? 0 : Math.PI);
-    const amplitude = this.amplitude * Math.sin(phase);
+    const amplitude = this.waveAt(currentTime - distanceCm / (this.velocity * this.displayScale));
     const y = centerY - amplitude * 2;
     rightPoints.push({ x, y, amplitude });
 }
@@ -453,8 +483,7 @@ for (let x = centerX; x <= width - 50; x += 2) {
         
 // ✅ Source vibrante dépend du temps, même en pause
  sourceOffset = 0;
-const phase = 2 * Math.PI * this.frequency * currentTime;
-sourceOffset = this.amplitude * 2 * Math.sin(phase + ((this.startDirection === "up") ? 0 : Math.PI));
+sourceOffset = 2 * this.waveAt(currentTime);
 
 
         // ✅ Source vibrante
@@ -566,9 +595,7 @@ for (let x = centerX; x >= 50; x -= 2) {
         leftPoints.push({ x, y: centerY, amplitude: 0 });
         continue;
     }
-    const phase = 2 * Math.PI * (this.frequency * currentTime - distanceCm / this.wavelengthDisplay)
-                + ((this.startDirection === "up") ? 0 : Math.PI);
-    const amplitude = this.amplitude * Math.sin(phase);
+    const amplitude = this.waveAt(currentTime - distanceCm / (this.velocity * this.displayScale));
     const y = centerY - amplitude * 2;
     leftPoints.push({ x, y, amplitude });
 }
@@ -582,9 +609,7 @@ for (let x = centerX; x <= width - 50; x += 2) {
         rightPoints.push({ x, y: centerY, amplitude: 0 });
         continue;
     }
-    const phase = 2 * Math.PI * (this.frequency * currentTime - distanceCm / this.wavelengthDisplay)
-                + ((this.startDirection === "up") ? 0 : Math.PI);
-    const amplitude = this.amplitude * Math.sin(phase);
+    const amplitude = this.waveAt(currentTime - distanceCm / (this.velocity * this.displayScale));
     const y = centerY - amplitude * 2;
     rightPoints.push({ x, y, amplitude });
 }
@@ -718,6 +743,30 @@ ctx.fillStyle = '#c0ebec';
     this.animationId = null;
   }
 
+  // Segment d'émission actif pour une perturbation partie de la source à l'instant tau
+  activeSeg(tau) {
+    if (tau < 0) return null;
+    for (const sg of this.segments) if (tau >= sg.t0 && tau < sg.t1) return sg;
+    return null;
+  }
+  // Élongation (mm) d'un point atteint avec le retard (time - tau)
+  waveAt(tau) {
+    const sg = this.activeSeg(tau);
+    if (!sg) return 0;
+    return this.amplitude * Math.sin(2 * Math.PI * this.frequency * (tau - sg.t0) + (this.startDirection === "up" ? 0 : Math.PI));
+  }
+  toggleVibrator() {
+    const last = this.segments[this.segments.length - 1];
+    if (last.t1 === Infinity) {
+      last.t1 = this.time;                       // arrêt à cet instant
+      if (this.vibratorBtn) this.vibratorBtn.textContent = "▶ Relancer le vibreur";
+    } else {
+      this.segments.push({ t0: this.time, t1: Infinity });
+      if (this.vibratorBtn) this.vibratorBtn.textContent = "⏹ Arrêter le vibreur";
+    }
+    this.draw();
+  }
+
   togglePlayPause() { this.isRunning ? this.pause() : this.play(); }
 
  stepBack() {
@@ -733,6 +782,8 @@ ctx.fillStyle = '#c0ebec';
   reset() {
     this.pause();
     this.time = 0;
+    this.segments = [{ t0: 0, t1: Infinity }];
+    if (this.vibratorBtn) this.vibratorBtn.textContent = "⏹ Arrêter le vibreur";
     // Vider proprement les historiques
     this.sourceTimes.length = 0; this.sourceDisp.length = 0;
     this.pointA.times.length = 0; this.pointA.trace.length = 0;
@@ -763,8 +814,7 @@ ctx.fillStyle = '#c0ebec';
 
   updateTraces() {
     // Source
-    const phase0 = 2 * Math.PI * this.frequency * this.time + (this.startDirection === "up" ? 0 : Math.PI);
-    const srcAmp = this.amplitude * Math.sin(phase0);
+    const srcAmp = this.waveAt(this.time);
     this.sourceTimes.push(this.time);
     this.sourceDisp.push(srcAmp);
 
@@ -776,11 +826,7 @@ ctx.fillStyle = '#c0ebec';
       const dy = (pt.y - cy) / displayScale;
       const d  = Math.hypot(dx, dy); // cm
       const delay = d / this.velocity; // s
-      let amp = 0;
-      if (this.time >= delay) {
-        const ph = 2 * Math.PI * this.frequency * (this.time - delay) + (this.startDirection === "up" ? 0 : Math.PI);
-        amp = this.amplitude * Math.sin(ph);
-      }
+      const amp = this.waveAt(this.time - delay);
       pt.times.push(this.time);
       pt.trace.push(amp);
       if (pt.times.length > this.MAX_TRACE) { pt.times.shift(); pt.trace.shift(); }
@@ -824,27 +870,8 @@ document.getElementById("chrono").innerText =
     ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.fill();
 
     // Points A & B (pour repère)
-    this.drawPoint(ctx, this.pointA);
-    this.drawPoint(ctx, this.pointB);
-	// Point A en rouge + libellé
-ctx.fillStyle = "red";
-ctx.beginPath();
-ctx.arc(this.pointA.x, this.pointA.y, 6, 0, 2 * Math.PI);
-ctx.fill();
-ctx.fillStyle = "red";
-ctx.font = "14px Arial";
-ctx.fillText("A", this.pointA.x + 10, this.pointA.y - 10);
-
-// Point B en vert + libellé
-ctx.fillStyle = "green";
-ctx.beginPath();
-ctx.arc(this.pointB.x, this.pointB.y, 6, 0, 2 * Math.PI);
-ctx.fill();
-ctx.fillStyle = "green";
-ctx.font = "14px Arial";
-ctx.fillText("B", this.pointB.x + 10, this.pointB.y - 10);
-// Ondes circulaires
-this.drawCircularWaves(ctx, cx, cy);
+    if (this.showPointA) this.drawPointLabeled(ctx, this.pointA, "red", "A");
+    if (this.showPointB) this.drawPointLabeled(ctx, this.pointB, "green", "B");
 
 // ✅ Axe gradué en λ au milieu des rides
 const pxPerCm = 10;
@@ -900,6 +927,13 @@ for (let i = 1; i <= 5; i++) {
 
   }
 
+  drawPointLabeled(ctx, pt, color, label) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI); ctx.fill();
+    ctx.font = "14px Arial";
+    ctx.fillText(label, pt.x + 10, pt.y - 10);
+  }
+
   drawPoint(ctx, pt) {
     ctx.fillStyle = pt.color;
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, Math.PI*2); ctx.fill();
@@ -917,13 +951,14 @@ for (let i = 1; i <= 5; i++) {
     for (let r = 0; r <= limit; r += 2) {
       const rc = r / pxPerCm; // cm
       const travelT = rc / this.velocityVisual; // s
-      const phase = 2 * Math.PI * this.frequency * (this.time - travelT) + (this.startDirection === "up" ? 0 : Math.PI);
-      const A = this.amplitude * Math.sin(phase);
+      const tau = this.time - travelT;
+      if (!this.activeSeg(tau)) continue; // eau calme : pas de ride
+      const A = this.waveAt(tau);
       const intensity = (A / this.amplitude + 1) / 2; // 0..1
       const b = Math.floor(120 + 135 * intensity);
       const gr = Math.floor(160 + 50 * intensity);
       const rd = Math.floor(100 + 20 * (1 - intensity));
-      ctx.strokeStyle = `rgba(${rd},${gr},${b},0.6)`;
+      ctx.strokeStyle = `rgba(${rd},${gr},${b},0.84)`;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
     }
 	

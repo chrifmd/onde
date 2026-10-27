@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulation de la propagation d’une onde le long d’une corde</title>
+<style>
+:root{--card:#fff;--ink:#2c3e50;--soft:#f8f9fa;--line:#ecf0f1;--acc:#3498db;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:#1f2430;--ink:#e3e8f2;--soft:#2a3040;--line:#394055;--acc:#6cb6f0;color-scheme:dark}}
+:root[data-theme="dark"]{--card:#1f2430;--ink:#e3e8f2;--soft:#2a3040;--line:#394055;--acc:#6cb6f0;color-scheme:dark}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:var(--ink);min-height:100vh;line-height:1.6}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+header{text-align:center;margin-bottom:20px;color:#fff}
+header h1{font-size:1.5rem;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
+header .sub{margin-top:10px;color:#bcd6ff;font-size:16px}
+.btn-home{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#bcd6ff;background:#5074b3;border:1px solid #2a2f38;border-radius:6px;font-size:13px;font-weight:600;padding:.55rem .9rem;margin:0 6px 1.25rem 0}
+.btn-home:hover{border-color:#7C9EF0;color:#fff}
+.layout{display:grid;grid-template-columns:auto 340px;justify-content:center;gap:18px;justify-items:center;align-items:start}
+.simulation-zone{max-width:100%}
+.controls-panel{background:var(--card);border-radius:15px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);width:100%;max-width:340px}
+canvas{border:4px solid #898885;border-radius:8px;display:block;max-width:100%;height:auto;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+#mainCanvas{background:radial-gradient(circle at center,#e8f3ff 0%,#a9cdf2 100%)}
+#mainCanvas.dark{background:#000}
+#diagramCanvas{background:#f8f9fa;margin-top:12px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.control-btn{padding:6px 12px;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .3s ease;background:var(--line);color:var(--ink);flex:1;min-width:100px}
+.control-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.control-btn.primary{background:#3498db;color:#fff}
+.control-btn.primary:hover{background:#2980b9}
+.control-btn.step{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff}
+.control-btn.on{background:#27ae60;color:#fff}
+.control-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+h3{color:var(--ink);margin:14px 0 4px;font-size:1.1rem}
+.parameter-control{margin:10px 0}
+.parameter-control label{display:block;margin-bottom:6px;font-weight:600}
+.parameter-control select{width:100%;padding:6px;border-radius:6px;border:1px solid #9aa;background:var(--soft);color:var(--ink);font-size:.95rem}
+.parameter-control input[type=range]{width:100%;height:6px;border-radius:3px;background:var(--line);outline:none;-webkit-appearance:none;appearance:none}
+.parameter-control input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#3498db;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.parameter-control input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#3498db;border:none;cursor:pointer}
+.parameter-control span{font-weight:600;color:var(--acc);font-size:.9rem}
+.param-display{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;background:var(--soft);border-radius:6px;border-left:4px solid #3498db;margin-top:8px}
+.param-display span:last-child{font-weight:700;color:var(--acc)}
+.trace-opt{margin:4px 0}
+.hint{margin-top:8px;color:var(--ink);opacity:.7;font-size:13px}
+#msg,#msg2{margin-top:10px;text-align:center;font-weight:600;color:#fff;min-height:24px;text-shadow:1px 1px 3px rgba(0,0,0,.4)}
+#strobPanel{display:none;border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
+.pill{display:inline-block;margin:4px 6px 0 0}
+.signature{text-align:center;font:bold 12px Arial;color:rgb(170,221,241);margin-top:30px}
+select.control-btn{border:1px solid #9aa;font-family:inherit;color:var(--ink)}
+.opts3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 22px;background:var(--card);border-radius:15px;padding:12px 18px 16px;margin-top:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);align-items:start}
+.opts3 h3{margin:0 0 4px;font-size:.98rem}
+.opts3 .trace-opt label{font-size:.9rem}
+.opts3 .param-display{font-size:.82rem;padding:4px 8px;flex-direction:column;align-items:flex-start}
+.opts3 .hint{margin-top:2px;font-size:12px}
+#printArea{display:none;padding:20px;font-family:sans-serif;color:#000}
+#printArea img{width:100%;border:1px solid #888}
+@media print{.container,#sceneStrob{display:none!important}#printArea{display:block!important}body{background:#fff}}
+#sceneStrob{display:none;max-width:960px;margin:0 auto}
+.bar{background:var(--card);border-radius:15px;padding:16px 20px;margin-top:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-start}
+.bar .grp{display:flex;flex-direction:column;gap:8px;min-width:190px;flex:1}
+.bar .grp label{font-weight:600}
+.bar input[type=range]{width:100%;accent-color:#3498db}
+.bar .btn-row{margin-top:0}
+.bar .val{color:var(--acc);font-weight:700}
+@media (max-width:900px){.opts3{padding:10px;gap:6px 10px}.opts3 .trace-opt label{font-size:.78rem}.opts3 .hint{font-size:11px}.opts3 .parameter-control label{font-size:.78rem}.opts3 select{font-size:.8rem;padding:3px}.controls-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;padding:12px;max-width:100%}.controls-panel>h3,.controls-panel>.btn-row,.controls-panel>.hint,.controls-panel>.trace-opt{grid-column:1/-1}.controls-panel h3{margin:8px 0 2px;font-size:1rem}.parameter-control{margin:6px 0}.parameter-control label{margin-bottom:2px;font-size:.88rem}.param-display{padding:4px 8px;margin-top:6px;font-size:.82rem;flex-direction:column;align-items:flex-start}.layout{grid-template-columns:1fr}.container{padding:12px}header h1{font-size:1.15rem}.control-btn{min-height:44px}.controls-panel{max-width:100%}.parameter-control input[type=range]{height:10px}}
+</style>
+<style>
+.tpbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;width:100%;padding:10px 16px;background:#1d2b53;border-bottom:3px solid #5074b3;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.3;text-align:left}
+.tpbar,.tpbar *{box-sizing:border-box}
+.tpbar .tp-home{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#bcd6ff;background:#5074b3;border:1px solid #2a2f38;border-radius:6px;font-size:13px;font-weight:600;padding:.55rem .9rem;margin:0;white-space:nowrap}
+.tpbar .tp-home:hover{border-color:#7C9EF0;color:#fff}
+.tpbar .tp-title{flex:1 1 280px;text-align:center;margin:0;font-size:1.25rem;font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:none}
+.tpbar .tp-sel{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:600;color:#bcd6ff}
+.tpbar .tp-sel select{max-width:min(440px,70vw);padding:8px 10px;border-radius:6px;border:1px solid #7C9EF0;background:#fff;color:#1d2b53;font:inherit;font-weight:600;cursor:pointer}
+@media (max-width:720px){.tpbar .tp-title{order:-1;flex-basis:100%;font-size:1.05rem}}
+@media print{.tpbar{display:none!important}}
+</style>
+</head>
+<body>
+<nav class="tpbar" aria-label="Navigation entre les TP">
+  <a class="tp-home" href="https://simphysique.tn/">← Retour à simphysique.tn</a>
+  <div class="tp-title" role="heading" aria-level="1">ONDES MÉCANIQUES PROGRESSIVES</div>
+  <label class="tp-sel">TP :
+    <select id="tpMenu"><option value="onde_corde.html" selected>Propagation d’une onde progressive le long d’une corde élastique tendue</option><option value="index.html">Propagation d’une onde progressive à la surface de l’eau</option><option value="onde_sonore.html">Mesure de la longueur d’onde d’une onde sonore</option></select>
+  </label>
+</nav>
+<script>
+(function(){var s=document.getElementById('tpMenu');
+s.addEventListener('change',function(){if(s.value)location.href=s.value});
+addEventListener('pageshow',function(){for(var i=0;i<s.options.length;i++)if(s.options[i].defaultSelected){s.selectedIndex=i;break}});})();
+</script>
+<div class="container">
+<header>
+  <h1>〰️ Simulation de la propagation d’une onde le long d’une corde</h1>
+  <div class="sub">Corde élastique tendue, sans réflexion ni amortissement (un clic sur l’écran pour démarrer ou arrêter)</div>
+</header>
+
+<main class="layout" id="sceneMain">
+  <div class="simulation-zone">
+    <div id="hostMain"><canvas id="mainCanvas" width="860" height="300" aria-label="Corde vibrante"></canvas></div>
+    <div id="msg"></div>
+    <div class="btn-row">
+      <button id="playBtn" class="control-btn primary">▶ Démarrer</button>
+      <button id="resetBtn" class="control-btn">🔄 Reset</button>
+      <button id="vibBtn" class="control-btn">⏹ Arrêter le vibreur</button>
+      <select id="saveSel" class="control-btn" aria-label="Enregistrer"><option value="">💾 Enregistrer…</option><option value="str">Aspect de la corde</option><option value="dia">Diagrammes de mouvement</option><option value="all">Aspect et diagrammes</option></select>
+      <button id="backBtn" class="control-btn step">⏪ Pas arrière</button>
+      <button id="fwdBtn" class="control-btn step">⏩ Pas avant</button>
+    </div>
+    <canvas id="diagramCanvas" width="860" height="300" style="display:none"></canvas>
+    <div class="btn-row" id="diagBar" style="display:none"><button id="printBtn" class="control-btn">🖨 Imprimer les courbes</button></div>
+  </div>
+
+  <div class="controls-panel">
+    <div class="btn-row"><button id="strobBtn" class="control-btn">🔦 Stroboscopie</button></div>
+
+    <div class="parameter-control"><label for="typ">Type d’onde :</label>
+      <select id="typ"><option value="imp">Impulsion (ébranlement)</option><option value="sin" selected>Onde progressive sinusoïdale</option></select></div>
+    <div class="parameter-control"><label for="dir">Début du mouvement :</label>
+      <select id="dir"><option value="up">Vers le haut (crête)</option><option value="down">Vers le bas (creux)</option></select></div>
+
+    <h3>Paramètres</h3>
+    <div class="parameter-control"><label for="f">Fréquence N du vibreur (Hz)</label><input type="range" id="f" min="5" max="50" step="1" value="20"><span id="fv"></span></div>
+    <div class="parameter-control"><label for="a">Amplitude (mm)</label><input type="range" id="a" min="1" max="10" step="0.1" value="5"><span id="av"></span></div>
+    <div class="parameter-control"><label for="vel">Célérité v de l’onde (m/s)</label><input type="range" id="vel" min="5" max="30" step="0.5" value="15"><span id="velv"></span></div>
+    <div class="parameter-control"><label for="sp">Vitesse d’animation</label><input type="range" id="sp" min="0.01" max="0.2" step="0.001" value="0.06"><span id="spv"></span></div>
+
+    <h3>Paramètres calculés</h3>
+    <div class="param-display"><span>Chronomètre :</span><span id="chrono">t = 0 ms</span></div>
+    <div class="param-display"><span>Période (T) :</span><span id="T"></span></div>
+    <div class="param-display"><span>Longueur d’onde (λ) :</span><span id="lam"></span></div>
+    <div class="param-display"><span>Célérité (v) :</span><span id="vv"></span></div>
+    <div class="param-display"><span>Retard θ mesuré (curseurs) :</span><span id="th"></span></div>
+    <div class="param-display"><span>θ théorique de A (x/v) :</span><span id="thA"></span></div>
+    <div class="param-display"><span>θ théorique de B (x/v) :</span><span id="thB"></span></div>
+
+    <div id="moved" class="opts3"><div class="col"><h3>Diagrammes de mouvement</h3>
+    <div class="trace-opt"><label style="color:#8e44ad"><input type="checkbox" id="tS"> Source S</label></div>
+    <div class="trace-opt"><label style="color:#e00000"><input type="checkbox" id="tA"> Point A</label></div>
+    <div class="trace-opt"><label style="color:#1a9a3a"><input type="checkbox" id="tB"> Point B</label></div>
+    <div class="trace-opt"><label><input type="checkbox" id="kCur" checked> Afficher les curseurs (retard θ)</label></div>
+    <div class="hint">Faites glisser les points A et B sur la corde pour changer leur position.</div>
+    </div><div class="col"><h3>Déphasages</h3>
+    <div class="parameter-control"><label for="phU">Unité :</label><select id="phU"><option value="rad">radians</option><option value="pi">multiples de π</option></select></div>
+    <div class="trace-opt"><label><input type="checkbox" id="kPAS"> φA − φS</label></div>
+    <div class="trace-opt"><label><input type="checkbox" id="kPBS"> φB − φS</label></div>
+    <div class="trace-opt"><label><input type="checkbox" id="kPAB"> φA − φB</label></div>
+    </div><div class="col"><h3>Valeurs</h3><div class="hint">Cochez un déphasage pour afficher sa valeur (onde sinusoïdale).</div>
+    <div class="param-display" id="rAS" style="display:none"><span>φA − φS :</span><span id="vAS"></span></div>
+    <div class="param-display" id="rBS" style="display:none"><span>φB − φS :</span><span id="vBS"></span></div>
+    <div class="param-display" id="rAB" style="display:none"><span>φA − φB :</span><span id="vAB"></span></div>
+    </div></div>
+
+  </div>
+</main>
+
+<section id="sceneStrob">
+  <div id="hostStrob"></div>
+  <div id="msg2"></div>
+  <div class="bar">
+    <div class="grp"><label for="fS">Fréquence du vibreur N : <span class="val" id="fSv"></span></label><input type="range" id="fS" min="5" max="50" step="1" value="20">
+      <label><input type="checkbox" id="sDark"> Salle obscure</label><label><input type="checkbox" id="sOn"> Stroboscope allumé</label></div>
+    <div class="grp"><label for="ne">Fréquence des éclairs Ne : <span class="val" id="nev"></span></label><input type="range" id="ne" min="3" max="100" step="0.1" value="30">
+      <div class="btn-row"><button class="control-btn" id="nM">− 0,1</button><button class="control-btn" id="nP">+ 0,1</button></div></div>
+    <div class="grp"><label>Choisir un entier p : <span class="val" id="pv">1</span> &nbsp; N/p = <span class="val" id="np"></span></label>
+      <div class="btn-row"><button class="control-btn" id="pM">−</button><button class="control-btn" id="pP">+</button></div>
+      <button id="retBtn" class="control-btn primary">↩ Retour à la corde</button></div>
+  </div>
+</section>
+
+<footer><div class="signature">Simulation de la propagation d’une onde le long d’une corde – d’après l’animation de Mohamed Chérif (Lycée TM Menzel Témime)</div></footer>
+</div>
+
+<div id="printArea"><h2>Onde le long d’une corde — courbes de mouvement</h2><img id="pImg" alt="Courbes de mouvement"></div>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id),cv=$('mainCanvas'),c=cv.getContext('2d'),dg=$('diagramCanvas'),d=dg.getContext('2d');
+let W=860,H=300,YB=150,C=1500;const X0=40,PXCM=0.5,KY=6,TAU=Math.PI*2;   /* 1 px = 0,5 cm ; v = 1500 cm/s ; 6 px par mm */
+const S={t:0,run:false,xA:200,xB:400,drag:null,p:1,strob:false,off:[],fr:[.2,.3],dc:null};
+
+function P(){C=+$('vel').value*100;return{f:+$('f').value,a:+$('a').value,sp:+$('sp').value,imp:$('typ').value==='imp',s:$('dir').value==='up'?1:-1}}
+function g(tau,p){if(tau<0)return 0;return p.imp?Math.exp(-Math.pow((tau-.03)/.01,2)):Math.sin(TAU*p.f*tau)}
+function yAt(x,t,p){const tau=t-(x-X0)*PXCM/C;   /* instant d’émission : le vibreur arrêté n’émet rien */
+ if(!p.steady&&!p.imp)for(const o of S.off)if(tau>=o[0]&&(o[1]===null||tau<o[1]))return 0;
+ return -KY*p.a*p.s*g(tau,p)}
+function vibOn(){return !S.off.length||S.off[S.off.length-1][1]!==null}
+/* déphasages : l’onde y = a·sin(2πN(t − x/v)) → φ(x) = − 2πN·x/v */
+function phv(p){const tA=(S.xA-X0)*PXCM/C,tB=(S.xB-X0)*PXCM/C,w=TAU*p.f;return{AS:-w*tA,BS:-w*tB,AB:-w*(tA-tB)}}
+function phTxt(v,p){if(p.imp)return '—';const u=$('phU').value==='pi'?(v/Math.PI).toFixed(2)+' π':v.toFixed(2)+' rad';const r=((v%TAU)+TAU)%TAU,e=Math.min(r,TAU-r);
+ return u+(e<.05?' (en phase)':Math.abs(e-Math.PI)<.05?' (opposition)':Math.abs(e-Math.PI/2)<.05?' (quadrature)':'')}
+function phases(p){const v=phv(p);[['AS','kPAS'],['BS','kPBS'],['AB','kPAB']].forEach(q=>{$('r'+q[0]).style.display=$(q[1]).checked?'':'none';$('v'+q[0]).textContent=phTxt(v[q[0]],p)})}
+function arrow(g,x0,y0,x1,y1,col){const a=Math.atan2(y1-y0,x1-x0),L=11;g.save();g.strokeStyle=g.fillStyle=col;g.lineWidth=1.6;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();g.beginPath();g.moveTo(x1,y1);g.lineTo(x1-L*Math.cos(a-.4),y1-L*Math.sin(a-.4));g.lineTo(x1-L*Math.cos(a+.4),y1-L*Math.sin(a+.4));g.closePath();g.fill();g.restore()}      /* ordonnée en px (négatif = vers le haut) */
+
+function ui(){const p=P();
+ $('fv').textContent='N = '+p.f+' Hz';$('av').textContent=p.a.toFixed(1)+' mm';$('spv').textContent='×'+p.sp.toFixed(3);
+ $('T').textContent=(1000/p.f).toFixed(1)+' ms';$('lam').textContent=(C/p.f).toFixed(1)+' cm';
+ $('chrono').textContent='t = '+(S.t*1000).toFixed(1)+' ms';
+ $('f').disabled=p.imp;$('strobBtn').disabled=p.imp;$('vibBtn').disabled=p.imp;$('vibBtn').textContent=vibOn()?'⏹ Arrêter le vibreur':'▶ Relancer le vibreur';
+ $('fS').value=p.f;$('velv').textContent=(C/100).toFixed(1)+' m/s';$('vv').textContent=(C/100).toFixed(1)+' m/s';
+ const tw=p.imp?.12:6/p.f;$('th').textContent=$('kCur').checked?(Math.abs(S.fr[1]-S.fr[0])*tw*1000).toFixed(1)+' ms':'—';
+ $('thA').textContent=((S.xA-X0)*PXCM/C*1000).toFixed(1)+' ms';$('thB').textContent=((S.xB-X0)*PXCM/C*1000).toFixed(1)+' ms';phases(p);$('fSv').textContent=p.f+' Hz';$('np').textContent=(p.f/S.p).toFixed(1)+' Hz';
+ $('nev').textContent=(+$('ne').value).toFixed(1)+' Hz';$('pv').textContent=S.p;
+}
+function string(t,p,col,al,w,beads){c.save();c.globalAlpha=al;c.strokeStyle=col;c.lineWidth=w;c.beginPath();
+ for(let x=X0;x<=W-8;x+=2){const y=YB+yAt(x,t,p);x===X0?c.moveTo(x,y):c.lineTo(x,y)}c.stroke();
+ if(beads){c.fillStyle=col;for(let x=X0;x<=W-8;x+=10){c.beginPath();c.arc(x,YB+yAt(x,t,p),3,0,TAU);c.fill()}}c.restore()}
+function blade(t,p,al,col){c.save();c.globalAlpha=al;c.lineCap='round';const y0=yAt(X0,t,p);
+ [['#2c3138',6],[col||'#aab4c0',3.5]].forEach(q=>{c.strokeStyle=q[0];c.lineWidth=q[1];c.beginPath();
+  for(let x=22;x<=X0;x+=2){const u=(x-22)/(X0-22),y=YB+y0*u*u;x===22?c.moveTo(x,y):c.lineTo(x,y)}c.stroke()});c.restore()}
+function block(){const gr=c.createLinearGradient(6,0,24,0);gr.addColorStop(0,'#555');gr.addColorStop(.4,'#d8d8e0');gr.addColorStop(1,'#707078');
+ c.fillStyle=gr;c.fillRect(6,YB-70,18,140);c.strokeStyle='#333';c.lineWidth=1;c.strokeRect(6,YB-70,18,140)}
+function dot(x,col,l,t,p){const y=YB+yAt(x,t,p);c.strokeStyle=col;c.setLineDash([4,4]);c.beginPath();c.moveTo(x,YB-95);c.lineTo(x,YB+95);c.stroke();c.setLineDash([]);
+ c.fillStyle=col;c.beginPath();c.arc(x,y,6,0,TAU);c.fill();c.font='bold 13px Segoe UI,sans-serif';c.fillText(l+' (x = '+((x-X0)*PXCM).toFixed(0)+' cm)',Math.min(x+8,W-110),YB-100)}
+
+function render(){const p=P(),dk=S.strob&&$('sDark').checked;p.steady=S.strob;cv.classList.toggle('dark',dk);c.clearRect(0,0,W,H);
+ const ax=dk?'#666':'#6a7a90';arrow(c,X0-4,YB,W-8,YB,ax);arrow(c,X0,YB+112,X0,YB-114,ax);
+ c.font='12px Segoe UI,sans-serif';c.fillStyle=dk?'#777':'#456';c.fillText('x (cm)',W-52,YB+22);c.fillText('y (mm)',X0+10,YB-102);for(let m=-10;m<=10;m+=2){if(!m)continue;const yy=YB-m*KY;c.fillRect(X0-3,yy,7,1);if([-8,-4,4,8].includes(m))c.fillText(m,X0+7,yy+4)}for(let k=1;X0+k*100<W-30;k++){c.fillRect(X0+k*100,YB-3,1,6);c.fillText(k*50,X0+k*100-8,YB+16)}
+ let msg='';
+ if(S.strob&&!p.imp){
+  const N=p.f,Ne=+$('ne').value,on=$('sOn').checked,lit=!dk,T=performance.now()/1000,n=Math.floor(T*15),fr=T*15-n,b=on?Math.max(0,1-fr*1.3):0;
+  if(lit){block();if(on){c.fillStyle='rgba(255,255,255,'+.3*b+')';c.fillRect(0,0,W,H)}
+   for(let k=0;k<16;k++){const tt=2+k/(16*N);string(tt,p,'#5a4a90',.1,1.5);blade(tt,p,.1,'#5a4a90')}}
+  if(on){const tn=2+n/Ne,col=lit?'#e05a00':'#ffffd0';
+   if(!lit){c.save();c.shadowColor='#ffffb0';c.shadowBlur=10*b;block();c.restore()}
+   string(tn,p,col,.15+.85*b,2.2,true);blade(tn,p,.15+.85*b,col)}
+  const m=Math.max(1,Math.round(N/Ne)),fa=N-m*Ne;
+  msg=!on?(dk?'Salle obscure : allumez le stroboscope pour voir la corde':'Sans stroboscope, on ne voit que l’enveloppe floue de la corde')
+   :Ne>N+3?'Ne > N : plusieurs images de la corde, mouvement saccadé'
+   :Math.abs(fa)<.05?'Corde apparemment immobile : Ne = N/'+m+' = '+Ne.toFixed(1)+' Hz'
+   :'Mouvement apparent ralenti '+(fa>0?'dans le sens réel':'en sens inverse')+' : '+Math.abs(fa).toFixed(1)+' Hz';
+ }else{
+  block();string(S.t,p,'#1b2a6b',1,2,!S.clean);blade(S.t,p,1);
+  if($('tA').checked)dot(S.xA,'#e00000','A',S.t,p);if($('tB').checked)dot(S.xB,'#1a9a3a','B',S.t,p);
+  msg=S.run?'':'Animation à l’arrêt — cliquez sur « Démarrer »';
+ }
+ $(S.strob?'msg2':'msg').textContent=msg;
+ diagram(p);ui();
+}
+function diagram(p){const on=['tS','tA','tB'].some(i=>$(i).checked);dg.style.display=on&&!S.strob?'block':'none';$('diagBar').style.display='';$('printBtn').disabled=dg.style.display==='none';Array.from($('saveSel').options).forEach(o=>{if(o.value==='dia'||o.value==='all')o.disabled=dg.style.display==='none'});if(!on||S.strob)return;
+ const w=dg.width,h=dg.height,y0=h/2,tw=p.imp?.12:6/p.f,t0=Math.max(0,S.t-tw);
+ d.clearRect(0,0,w,h);d.fillStyle='#f8f9fa';d.fillRect(0,0,w,h);arrow(d,30,y0,w-10,y0,'#444');arrow(d,30,h-8,30,10,'#444');
+ d.font='13px Segoe UI,sans-serif';d.fillStyle='#444';d.fillText('y (mm)',38,22);d.fillText('t (ms)',w-60,y0-12);
+ d.font='11px Segoe UI,sans-serif';d.strokeStyle='#ddd';d.lineWidth=1;for(let m=-10;m<=10;m+=2){if(!m)continue;const yy=y0-m*10.2;d.beginPath();d.moveTo(30,yy);d.lineTo(w-10,yy);d.stroke();if([-8,-4,4,8].includes(m))d.fillText(m,2,yy+4)}d.font='13px Segoe UI,sans-serif';
+ const step=p.imp?.02:1/p.f;for(let k=0;;k++){const tt=k*step;if(tt>t0+tw+1e-9)break;if(tt<t0-1e-9)continue;const x=30+(tt-t0)/tw*(w-40);d.fillStyle='#666';d.fillRect(x,y0-3,1,6);d.fillText((tt*1000).toFixed(0),x-6,y0+16)}
+ [['tS',X0,'#8e44ad'],['tA',S.xA,'#e00000'],['tB',S.xB,'#1a9a3a']].forEach(q=>{if(!$(q[0]).checked)return;d.strokeStyle=q[2];d.lineWidth=3;d.beginPath();
+  const tmax=Math.min(S.t,t0+tw);let f=false;for(let tt=t0;tt<=tmax;tt+=tw/300){const x=30+(tt-t0)/tw*(w-40),y=y0+yAt(q[1],tt,p)*1.7;f?d.lineTo(x,y):(d.moveTo(x,y),f=true)}d.stroke()});if($('kCur').checked&&!S.clean)cursors(w,h,tw);legend(p)}
+function cursors(w,h,tw){const xs=S.fr.map(f=>30+f*(w-40)),col=['#333','#f39c12'];
+ xs.forEach((x,i)=>{d.strokeStyle=col[i];d.lineWidth=1.5;d.setLineDash([6,4]);d.beginPath();d.moveTo(x,50);d.lineTo(x,h-24);d.stroke();d.setLineDash([]);
+  d.fillStyle=col[i];d.beginPath();d.moveTo(x,h-24);d.lineTo(x-8,h-8);d.lineTo(x+8,h-8);d.closePath();d.fill();d.font='bold 13px Segoe UI,sans-serif';d.fillText('t'+(i+1),x+10,h-10)});
+ const th=Math.abs(S.fr[1]-S.fr[0])*tw*1000,xa=Math.min(xs[0],xs[1]),xb=Math.max(xs[0],xs[1]);
+ if(xb-xa>4){d.strokeStyle='#c0392b';d.lineWidth=1.5;d.beginPath();d.moveTo(xa,60);d.lineTo(xb,60);d.stroke();d.fillStyle='#c0392b';d.font='bold 14px Segoe UI,sans-serif';d.fillText('θ = '+th.toFixed(1)+' ms',(xa+xb)/2-38,54)}}
+function legend(p){d.font='bold 14px Segoe UI,sans-serif';d.fillStyle='#222';d.textAlign='right';let y=22;const x=dg.width-14;
+ d.fillText((p.imp?'Impulsion':'Onde sinusoïdale, N = '+p.f+' Hz')+' — a = '+p.a.toFixed(1)+' mm — v = '+(C/100).toFixed(1)+' m/s',x,y);
+ [['tS','S (source)','#8e44ad'],['tA','A (x = '+((S.xA-X0)*PXCM).toFixed(0)+' cm)','#e00000'],['tB','B (x = '+((S.xB-X0)*PXCM).toFixed(0)+' cm)','#1a9a3a']].forEach(q=>{if(!$(q[0]).checked)return;y+=20;d.fillStyle=q[2];d.fillText('— '+q[1],x,y)});
+ const ph=phv(p);[['kPAS','AS','φA − φS'],['kPBS','BS','φB − φS'],['kPAB','AB','φA − φB']].forEach(q=>{if($(q[0]).checked&&!p.imp){y+=20;d.fillStyle='#222';d.fillText(q[2]+' = '+phTxt(ph[q[1]],p),x,y)}});d.textAlign='left'}
+
+/* commandes */
+function setRun(r){S.run=r;$('playBtn').textContent=r?'⏸ Pause':'▶ Démarrer'}
+$('playBtn').onclick=()=>setRun(!S.run);cv.addEventListener('click',e=>{if(!S.strob&&!S.drag&&!S.moved)setRun(!S.run)});
+$('resetBtn').onclick=()=>{S.t=0;S.off=[];setRun(false)};
+$('vibBtn').onclick=()=>{if(vibOn())S.off.push([S.t,null]);else S.off[S.off.length-1][1]=S.t;ui()};
+const dts=()=>{const p=P();return p.imp?.002:1/(20*p.f)};
+$('backBtn').onclick=()=>{setRun(false);S.t=Math.max(0,S.t-dts())};
+$('fwdBtn').onclick=()=>{setRun(false);S.t+=dts()};
+['typ','dir','f','a','sp','vel'].forEach(i=>$(i).oninput=()=>{if(i==='typ'||i==='dir'||i==='f'||i==='vel'){S.t=0;S.off=[]}ui()});
+$('fS').oninput=()=>{$('f').value=$('fS').value;S.t=0;S.off=[];ui()};
+function openStrob(on){S.strob=on;setRun(false);$('sceneMain').style.display=on?'none':'';$('sceneStrob').style.display=on?'block':'none';
+ W=on?900:860;H=on?340:300;YB=on?170:150;cv.width=W;cv.height=H;(on?$('hostStrob'):$('hostMain')).appendChild(cv);
+ if(on){S.p=1;const N=P().f;let ne;do{ne=Math.round(N*(.55+.4*Math.random())*10)/10}while(Math.abs(ne-N)<2);$('ne').value=Math.max(3,ne)}ui()}   /* Ne quelconque au départ : c’est à l’élève de trouver l’immobilité */
+$('strobBtn').onclick=()=>openStrob(true);$('retBtn').onclick=()=>openStrob(false);
+function setNe(){const ne=Math.min(100,Math.max(3,P().f/S.p));$('ne').value=ne.toFixed(1)}
+$('ne').oninput=ui;
+$('nM').onclick=()=>{$('ne').value=(+$('ne').value-.1).toFixed(1)};$('nP').onclick=()=>{$('ne').value=(+$('ne').value+.1).toFixed(1)};
+$('pM').onclick=()=>{S.p=Math.max(1,S.p-1);setNe()};$('pP').onclick=()=>{S.p=Math.min(8,S.p+1);setNe()};
+addEventListener('keydown',e=>{if(!S.strob||/INPUT|SELECT/.test(document.activeElement.tagName))return;const v={ArrowUp:1,ArrowDown:-1,ArrowRight:.1,ArrowLeft:-.1}[e.key];if(v){e.preventDefault();$('ne').value=Math.min(100,Math.max(3,+$('ne').value+v)).toFixed(1)}});
+
+/* déplacement des points A et B */
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]}
+cv.onpointerdown=e=>{S.moved=false;if(S.strob)return;const[x]=pos(e);
+ [['tA','xA'],['tB','xB']].forEach(q=>{if($(q[0]).checked&&Math.abs(x-S[q[1]])<14)S.drag=q[1]});if(S.drag)cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(S.drag){S.moved=true;S[S.drag]=Math.max(X0+10,Math.min(W-12,pos(e)[0]))}};
+cv.onpointerup=()=>{S.drag=null;setTimeout(()=>S.moved=false,0)};
+
+function dx(e){const r=dg.getBoundingClientRect();return (e.clientX-r.left)*dg.width/r.width}
+dg.style.touchAction='pan-y';
+dg.onpointerdown=e=>{if(!$('kCur').checked)return;const x=dx(e),xs=S.fr.map(f=>30+f*(dg.width-40));let b=-1,bd=22;xs.forEach((q,i)=>{if(Math.abs(q-x)<bd){bd=Math.abs(q-x);b=i}});if(b>=0){S.dc=b;dg.setPointerCapture(e.pointerId)}};
+dg.onpointermove=e=>{if(S.dc!==null)S.fr[S.dc]=Math.max(0,Math.min(1,(dx(e)-30)/(dg.width-40)))};
+dg.onpointerup=()=>{S.dc=null};
+const _oldSave=()=>{dg.toBlob(async b=>{let dl=null;try{dl=await claude.use('downloads')}catch(e){}
+ if(dl){try{await dl.save({filename:'courbes_onde_corde.png',data:b})}catch(e){}}
+ else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='courbes_onde_corde.png';a.click()}})};
+function saveCanvas(cn,name,cap){const o=document.createElement('canvas');o.width=cn.width;o.height=cn.height+(cap?28:0);const g=o.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,o.width,o.height);g.drawImage(cn,0,cap?28:0);
+ if(cap){g.fillStyle='#222';g.font='bold 14px Segoe UI,sans-serif';g.fillText(cap,10,19)}
+ o.toBlob(async b=>{let dl=null;try{dl=await claude.use('downloads')}catch(e){}
+  if(dl){try{await dl.save({filename:name,data:b})}catch(e){}}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click()}})}
+function buildAll(){const p=P();S.clean=true;render();const o=document.createElement('canvas');o.width=Math.max(cv.width,dg.width);o.height=30+cv.height+dg.height;const g=o.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,o.width,o.height);
+ g.drawImage(cv,0,30);g.drawImage(dg,0,30+cv.height);g.fillStyle='#222';g.font='bold 14px Segoe UI,sans-serif';
+ g.fillText('Aspect de la corde à t = '+(S.t*1000).toFixed(1)+' ms — N = '+p.f+' Hz — v = '+(C/100).toFixed(1)+' m/s — a = '+p.a.toFixed(1)+' mm',10,20);S.clean=false;render();return o}
+function buildMode(m){const p=P();S.clean=true;render();const parts=[];if(m!=='dia')parts.push(cv);if(m!=='str')parts.push(dg);
+ const o=document.createElement('canvas');o.width=Math.max(...parts.map(x=>x.width));o.height=30+parts.reduce((s,x)=>s+x.height,0);const g=o.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,o.width,o.height);
+ let y=30;parts.forEach(x=>{g.drawImage(x,0,y);y+=x.height});g.fillStyle='#222';g.font='bold 14px Segoe UI,sans-serif';
+ g.fillText((m==='dia'?'Diagrammes de mouvement':'Aspect de la corde à t = '+(S.t*1000).toFixed(1)+' ms')+' — N = '+p.f+' Hz — v = '+(C/100).toFixed(1)+' m/s — a = '+p.a.toFixed(1)+' mm',10,20);S.clean=false;render();return o}
+$('saveSel').onchange=function(){const m=this.value;this.value='';if(m)saveCanvas(buildMode(m),{str:'aspect_corde.png',dia:'diagrammes_mouvement.png',all:'aspect_et_diagrammes.png'}[m],null)};
+$('printBtn').onclick=()=>{$('pImg').src=buildAll().toDataURL('image/png');setTimeout(()=>{try{window.print()}catch(e){alert('Impression indisponible ici : utilisez « Enregistrer » puis imprimez l’image.')}},60)};
+$('diagBar').insertBefore($('saveSel'),$('printBtn'));
+document.querySelector('.simulation-zone').appendChild($('moved'));
+let last=performance.now();
+(function loop(ts){const dt=Math.min(.1,(ts-last)/1000);last=ts;if(S.run&&!S.strob)S.t+=dt*P().sp;render();requestAnimationFrame(loop)})(last);
+})();
+</script>
+</body>
+</html>

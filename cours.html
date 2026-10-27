@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Résumé du cours – Ondes progressives</title>
+<style>
+  :root { --bg:#f3f7fb; --ink:#14263a; --muted:#4a6078; --accent:#1f6fb2; --soft:#e2eef9; --line:#c9dbec; --key:#fff6d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0c1624; --ink:#e6eef7; --muted:#9bb2c9; --accent:#7cb8ee; --soft:#14263a; --line:#26405a; --key:#2b2a14; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.65 Georgia, "Times New Roman", serif; }
+  .page { max-width:760px; margin:0 auto; padding:20px 16px 48px; }
+  nav a { display:inline-block; margin:0 6px 8px 0; padding:10px 14px; border-radius:6px; background:#5074b3; color:#fff; text-decoration:none; font:600 13px Arial, sans-serif; }
+  h1 { font-size:1.7rem; line-height:1.25; margin:18px 0 6px; }
+  .lead { color:var(--muted); margin:0 0 24px; }
+  h2 { font-size:1.25rem; margin:34px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+  h3 { font-size:1.05rem; margin:18px 0 4px; color:var(--accent); }
+  p { margin:8px 0; }
+  .formula { background:var(--soft); border-left:4px solid var(--accent); padding:10px 14px; margin:12px 0; font-size:1.05rem; overflow-x:auto; }
+  .key { background:var(--key); border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin:14px 0; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.95rem; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); }
+  svg { width:100%; height:auto; display:block; margin:14px 0; background:var(--soft); border-radius:8px; }
+  ul { padding-left:22px; margin:8px 0; }
+  li { margin:4px 0; }
+  .sim a { color:var(--accent); font-weight:bold; }
+  footer { margin-top:40px; font:12px Arial, sans-serif; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav>
+    <a href="https://simphysique.blogspot.com/">← Site SimPhysique</a>
+    <a href="index.html">🌊 Simulation 2D</a>
+    <a href="salle_obs.html">🔦 Stroboscopie</a>
+  </nav>
+
+  <h1>Propagation d’une onde progressive</h1>
+  <p class="lead">Résumé du cours, avec renvois vers les simulations de la cuve à onde.</p>
+
+  <h2>1. Notion d’onde progressive</h2>
+  <p>Une <b>onde mécanique progressive</b> est la propagation d’une perturbation dans un milieu élastique, de proche en proche, <b>sans transport de matière</b> mais avec transport d’énergie.</p>
+  <ul>
+    <li><b>Onde transversale</b> : la direction de la perturbation est perpendiculaire à la direction de propagation (corde, ondes à la surface de l’eau, vue en coupe).</li>
+    <li><b>Onde longitudinale</b> : les deux directions sont parallèles (ressort comprimé, son dans l’air).</li>
+    <li>Une onde à une dimension se propage le long d’une corde ; à deux dimensions, à la surface de l’eau ; à trois dimensions, dans l’espace (son).</li>
+  </ul>
+
+  <h2>2. Célérité et retard</h2>
+  <p>La <b>célérité</b> v de l’onde dépend uniquement du milieu (et non de la source). Elle est constante dans un milieu homogène.</p>
+  <div class="formula">v = d / τ &nbsp;&nbsp; soit &nbsp;&nbsp; τ = d / v</div>
+  <p>τ est le <b>retard</b> : le point M situé à la distance d de la source S reproduit le mouvement de S avec un retard τ.</p>
+  <div class="formula">y<sub>M</sub>(t) = y<sub>S</sub>(t − τ)</div>
+
+  <h2>3. Onde progressive sinusoïdale</h2>
+  <p>La source S vibre sinusoïdalement : y<sub>S</sub>(t) = a·sin(2πN·t + φ), avec N la fréquence et a l’amplitude.</p>
+
+  <table>
+    <tr><th>Grandeur</th><th>Définition</th><th>Unité</th></tr>
+    <tr><td>Amplitude a</td><td>Élongation maximale d’un point du milieu</td><td>m (ou mm)</td></tr>
+    <tr><td>Période T</td><td>Durée d’une oscillation complète ; T = 1/N</td><td>s</td></tr>
+    <tr><td>Fréquence N</td><td>Nombre d’oscillations par seconde ; imposée par la source</td><td>Hz</td></tr>
+    <tr><td>Longueur d’onde λ</td><td>Distance parcourue par l’onde pendant une période</td><td>m</td></tr>
+  </table>
+
+  <div class="formula">λ = v · T = v / N</div>
+
+  <svg viewBox="0 0 600 200" role="img" aria-label="Sinusoïde montrant l’amplitude a et la longueur d’onde lambda">
+    <line x1="20" y1="100" x2="580" y2="100" stroke="currentColor" stroke-opacity=".4"/>
+    <path d="M20,100 C80,10 140,10 200,100 C260,190 320,190 380,100 C440,10 500,10 560,100" fill="none" stroke="#1f6fb2" stroke-width="3"/>
+    <line x1="110" y1="100" x2="110" y2="35" stroke="#d9534f" stroke-width="2"/>
+    <text x="118" y="70" fill="#d9534f" font-size="16" font-family="Georgia">a</text>
+    <line x1="20" y1="175" x2="380" y2="175" stroke="#2e8b57" stroke-width="2"/>
+    <line x1="20" y1="168" x2="20" y2="182" stroke="#2e8b57" stroke-width="2"/>
+    <line x1="380" y1="168" x2="380" y2="182" stroke="#2e8b57" stroke-width="2"/>
+    <text x="190" y="165" fill="#2e8b57" font-size="16" font-family="Georgia">λ</text>
+  </svg>
+
+  <div class="key"><b>Double périodicité.</b> L’onde est périodique <b>dans le temps</b> (période T, en un point fixe) et <b>dans l’espace</b> (période λ, à un instant fixé).</div>
+
+  <h2>4. Équation horaire d’un point du milieu</h2>
+  <p>Un point M à la distance x de la source (onde avançant dans le sens positif) vérifie :</p>
+  <div class="formula">y<sub>M</sub>(t) = a·sin( 2πN (t − x/v) + φ ) &nbsp; pour t ≥ x/v<br>
+  y<sub>M</sub>(t) = a·sin( 2π t/T − 2π x/λ + φ )</div>
+  <p>Avant l’arrivée de l’onde (t &lt; x/v), le point M reste au repos : y<sub>M</sub> = 0.</p>
+
+  <h2>5. Comparer deux points : phase et distance</h2>
+  <p>Deux points M₁ et M₂ du milieu, distants de d = M₁M₂ le long de la direction de propagation, vibrent avec un déphasage Δφ = 2π·d/λ.</p>
+  <table>
+    <tr><th>Mouvements</th><th>Condition</th><th>Déphasage</th></tr>
+    <tr><td><b>En phase</b> (même élongation, même sens)</td><td>d = k·λ</td><td>Δφ = 2kπ</td></tr>
+    <tr><td><b>En opposition de phase</b></td><td>d = (2k + 1)·λ/2</td><td>Δφ = (2k + 1)π</td></tr>
+    <tr><td><b>En quadrature de phase</b></td><td>d = (2k + 1)·λ/4</td><td>Δφ = π/2 + kπ</td></tr>
+  </table>
+  <p>(k est un entier naturel.) Dans la simulation, placez les points A et B sur la surface et observez leurs diagrammes de mouvement pour vérifier ces conditions.</p>
+
+  <h2>6. Ondes à la surface de l’eau</h2>
+  <ul>
+    <li>Une pointe qui frappe l’eau à la fréquence N crée des <b>cercles concentriques</b> : les crêtes et les creux sont des cercles de centre S.</li>
+    <li>Deux crêtes consécutives sont distantes de <b>λ</b>.</li>
+    <li>Un morceau de liège oscille verticalement sur place : la matière ne se déplace pas avec l’onde.</li>
+    <li>L’amplitude diminue avec la distance (l’énergie se répartit sur des cercles de plus en plus grands) et à cause des frottements.</li>
+  </ul>
+
+  <h2>7. Stroboscopie</h2>
+  <p>Le stroboscope éclaire la surface par éclairs, à la fréquence Ne. L’œil ne perçoit que l’état de l’onde aux instants des éclairs.</p>
+  <table>
+    <tr><th>Condition</th><th>Aspect observé</th></tr>
+    <tr><td>Ne = N (ou N = k·Ne)</td><td><b>Immobilité apparente</b> : la surface semble figée ; on lit λ directement entre deux crêtes.</td></tr>
+    <tr><td>Ne légèrement inférieure à N</td><td><b>Ralenti apparent</b>, dans le sens réel de propagation.</td></tr>
+    <tr><td>Ne légèrement supérieure à N</td><td><b>Ralenti apparent</b>, dans le sens inverse.</td></tr>
+  </table>
+  <p>La stroboscopie permet de mesurer λ sans arrêter l’onde, puis de calculer la célérité : v = λ·N.</p>
+
+  <h2>À retenir</h2>
+  <div class="key">
+    <ul>
+      <li>Une onde transporte de l’énergie, pas de matière.</li>
+      <li>v dépend du milieu ; N dépend de la source.</li>
+      <li>T = 1/N &nbsp;;&nbsp; λ = v·T = v/N &nbsp;;&nbsp; τ = d/v.</li>
+      <li>En phase : d = kλ &nbsp;;&nbsp; en opposition : d = (2k+1)λ/2.</li>
+      <li>Immobilité apparente : Ne = N.</li>
+    </ul>
+  </div>
+
+  <footer>Mohamed Chérif – Menzel Témime – Tunisie – chrif.md@gmail.com</footer>
+</div>
+</body>
+</html>
