@@ -66,9 +66,30 @@ select.control-btn{border:1px solid #9aa;font-family:inherit;color:var(--ink)}
 .bar .btn-row{margin-top:0}
 .bar .val{color:var(--acc);font-weight:700}
 @media (max-width:900px){.opts3{padding:10px;gap:6px 10px}.opts3 .trace-opt label{font-size:.78rem}.opts3 .hint{font-size:11px}.opts3 .parameter-control label{font-size:.78rem}.opts3 select{font-size:.8rem;padding:3px}.controls-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;padding:12px;max-width:100%}.controls-panel>h3,.controls-panel>.btn-row,.controls-panel>.hint,.controls-panel>.trace-opt{grid-column:1/-1}.controls-panel h3{margin:8px 0 2px;font-size:1rem}.parameter-control{margin:6px 0}.parameter-control label{margin-bottom:2px;font-size:.88rem}.param-display{padding:4px 8px;margin-top:6px;font-size:.82rem;flex-direction:column;align-items:flex-start}.layout{grid-template-columns:1fr}.container{padding:12px}header h1{font-size:1.15rem}.control-btn{min-height:44px}.controls-panel{max-width:100%}.parameter-control input[type=range]{height:10px}}
+.tpbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;width:100%;padding:10px 16px;background:#1d2b53;border-bottom:3px solid #5074b3;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.3;text-align:left}
+.tpbar,.tpbar *{box-sizing:border-box}
+.tpbar .tp-home{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#bcd6ff;background:#5074b3;border:1px solid #2a2f38;border-radius:6px;font-size:13px;font-weight:600;padding:.55rem .9rem;margin:0;white-space:nowrap}
+.tpbar .tp-home:hover{border-color:#7C9EF0;color:#fff}
+.tpbar .tp-title{flex:1 1 280px;text-align:center;margin:0;font-size:1.25rem;font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:none}
+.tpbar .tp-sel{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:600;color:#bcd6ff}
+.tpbar .tp-sel select{max-width:min(440px,70vw);padding:8px 10px;border-radius:6px;border:1px solid #7C9EF0;background:#fff;color:#1d2b53;font:inherit;font-weight:600;cursor:pointer}
+@media (max-width:720px){.tpbar .tp-title{order:-1;flex-basis:100%;font-size:1.05rem}}
+@media print{.tpbar{display:none!important}}
 </style>
 </head>
 <body>
+  <nav class="tpbar" aria-label="Navigation entre les TP">
+  <a class="tp-home" href="https://simphysique.tn/">← Retour à simphysique.tn</a>
+  <div class="tp-title" role="heading" aria-level="1">ONDES MÉCANIQUES PROGRESSIVES</div>
+  <label class="tp-sel">TP :
+    <select id="tpMenu"><option value="onde_corde.html" selected>Propagation d’une onde progressive le long d’une corde élastique tendue</option><option value="index.html">Propagation d’une onde progressive à la surface de l’eau</option><option value="onde_sonore.html">Mesure de la longueur d’onde d’une onde sonore</option></select>
+  </label>
+</nav>
+<script>
+(function(){var s=document.getElementById('tpMenu');
+s.addEventListener('change',function(){if(s.value)location.href=s.value});
+addEventListener('pageshow',function(){for(var i=0;i<s.options.length;i++)if(s.options[i].defaultSelected){s.selectedIndex=i;break}});})();
+</script>
 <div class="container">
 <header>
   <a class="btn-home" href="https://simphysique.blogspot.com/">← Retour au site SimPhysique</a>
